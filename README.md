@@ -9,11 +9,11 @@ Any comments and advices are always welcom.
 - Rescorla_Wagner_Model
 - TD_Model
 - **ThePole** : Pole balancing problem. 
--- **Pole_Balancing_Engine.m** : Physic engine for the pole balancing problem. 
--- **Pole_Balancing_GeneticAlgorithm.m** : Solving the pole balancing problem by genetic algorithm.
--- **Pole_Balancing_LoadOptimal.m** : Visualizing program by loading the learnt optimal values.
--- **Reference.pdf** : reference paper for designing the physic engine.
--- **sortsel.m** : function. used in the Pole_Balancing_GeneticAlgorithm.m.
+    - **Pole_Balancing_Engine.m** : Physic engine for the pole balancing problem. 
+    - **Pole_Balancing_GeneticAlgorithm.m** : Solving the pole balancing problem by genetic algorithm.
+    - **Pole_Balancing_LoadOptimal.m** : Visualizing program by loading the learnt optimal values.
+    - **Reference.pdf** : reference paper for designing the physic engine.
+    - **sortsel.m** : function. used in the Pole_Balancing_GeneticAlgorithm.m.
 - TicTacToe
 only bold named folders are working properly.
 other folders do work well, but some rearrangements are needed to improve readability.
