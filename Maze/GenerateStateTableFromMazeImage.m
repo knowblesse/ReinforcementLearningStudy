@@ -1,35 +1,58 @@
 %% Generate State Table from Maze Image
-% maze image must be square sized and resized to match the maze size * integer!!!
-% sizemateched image = img
+FILENAME = '30x30.png';
+img = imread(FILENAME);
 
 %% Constants
 num_maze_row = 30;
 num_maze_column = 30;
 
-cell_size = size(img,1) / num_maze_row; % this must be integer.
+cell_size = size(img,1) / num_maze_column;
 
-%% Check Boarders for each cells
+%% Check Boarder Thickness and Cell Size
+%{
+***-----***-----***
+ 3   5   3   5   3   ==> n 
+%}
+changepoint = find(diff(img(floor(cell_size/2),:,1) < 250));
+n = [changepoint, size(img,1)] - [0, changepoint]; % should be odd number.
+
+if mod(numel(n),2) ~= 1 
+    error('The size of the difference array is not odd number!');
+end
+
+boarder_thickness = mean(n(1:2:end));
+
+cell_size = (size(img,1) - boarder_thickness * (num_maze_column+1)) / num_maze_column + boarder_thickness;
+
+clearvars changepoint n
+
 
 %% Check left and right boarders
 lrboarders = zeros(num_maze_row, num_maze_column+1); % left right boarders => [mazesize(1)+1, mazesize(2)]
 for r = 1 : num_maze_row
     for c = 1 : num_maze_column+1
-        coordinate_to_check = [...
-            cell_size * (c-1),...
+        coor_ = [...
+            cell_size * (c-1) + 1,...
             cell_size * (r-1) + cell_size/2];
-        if c ~= num_maze_column+1 % not the last column
-            coordinate_to_check = coordinate_to_check + 1; % w/o this, first corrdinate for the first column is 0
+        if c == num_maze_column+1 % last column
+            coor_(1) = coor_(1) - (coor_(1)+boarder_thickness - size(img,1));
         end
         
-        if img(coordinate_to_check(1), coordinate_to_check(2), 1) < 250 % not white. i.e. there is a boarder
-            img(coordinate_to_check(1), coordinate_to_check(2), 1) = 255;
-            img(coordinate_to_check(1), coordinate_to_check(2), 2) = 0;
-            img(coordinate_to_check(1), coordinate_to_check(2), 3) = 0;
+        coor = round(coor_);
+        % if any pixel from coor to <half-boarder size pixel> right from coor is black, there is a boarder
+        if any(img(coor(1):coor(1)+round(boarder_thickness), coor(2), 1) < 250) 
+            for k = 0 : round(boarder_thickness)
+                img(coor(1)+k, coor(2), 1) = 255;
+                img(coor(1)+k, coor(2), 2) = 0;
+                img(coor(1)+k, coor(2), 3) = 0;
+            end
             lrboarders(r,c) = 1;
         else
-            img(coordinate_to_check(1), coordinate_to_check(2), 1) = 0;
-            img(coordinate_to_check(1), coordinate_to_check(2), 2) = 0;
-            img(coordinate_to_check(1), coordinate_to_check(2), 3) = 255;
+            for k = 0 : round(boarder_thickness)
+                img(coor(1)+k, coor(2), 1) = 0;
+                img(coor(1)+k, coor(2), 2) = 0;
+                img(coor(1)+k, coor(2), 3) = 255;
+            end
             lrboarders(r,c) = 0;
         end
     end
@@ -38,22 +61,28 @@ end
 udboarders = zeros(num_maze_row+1, num_maze_column); % up down boarders => [mazesize(1), mazesize(2)+1]
 for r = 1 : num_maze_row+1
     for c = 1 : num_maze_column
-        coordinate_to_check = [...
+        coor_ = [...
             cell_size * (c-1) + cell_size/2,...
-            cell_size * (r-1)];
-        if r ~= num_maze_row+1 % not the last row
-            coordinate_to_check = coordinate_to_check + 1; % w/o this, first corrdinate for the first column is 0
+            cell_size * (r-1) + 1];
+        if r == num_maze_row+1 % last row
+            coor_(2) = coor_(2) - (coor_(2) + boarder_thickness - size(img,2));
         end
         
-        if img(coordinate_to_check(1), coordinate_to_check(2), 1) < 250 % not white. i.e. there is a boarder
-            img(coordinate_to_check(1), coordinate_to_check(2), 1) = 255;
-            img(coordinate_to_check(1), coordinate_to_check(2), 2) = 0;
-            img(coordinate_to_check(1), coordinate_to_check(2), 3) = 0;
-            udboarders(r,c) = 1;
+        coor = round(coor_);
+        % if any pixel from coor to <half-boarder size pixel> down from coor is black, there is a boarder
+        if any(img(coor(1), coor(2):coor(2)+round(boarder_thickness), 1) < 250)
+            for k = 0 : round(boarder_thickness)
+                img(coor(1), coor(2)+k, 1) = 255;
+                img(coor(1), coor(2)+k, 2) = 0;
+                img(coor(1), coor(2), 3) = 0;
+            end
+            udboarders(r,c) = 1;    
         else
-            img(coordinate_to_check(1), coordinate_to_check(2), 1) = 0;
-            img(coordinate_to_check(1), coordinate_to_check(2), 2) = 0;
-            img(coordinate_to_check(1), coordinate_to_check(2), 3) = 255;
+            for k = 0 : round(boarder_thickness)
+                img(coor(1), coor(2)+k, 1) = 0;
+                img(coor(1), coor(2)+k, 2) = 0;
+                img(coor(1), coor(2)+k, 3) = 255;
+            end
             udboarders(r,c) = 0;
         end
     end
@@ -92,3 +121,4 @@ for r = 1 : num_maze_row
 end
 output = output - 1;
 imshow(img);
+dlmwrite(strcat(FILENAME,'_table.txt'),output,'delimiter','\t');
