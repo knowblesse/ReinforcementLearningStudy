@@ -1,10 +1,10 @@
 %% Generate State Table from Maze Image
-FILENAME = '30x30.png';
+FILENAME = 'Maze_14x14.png';
 img = imread(FILENAME);
 
 %% Constants
-num_maze_row = 30;
-num_maze_column = 30;
+num_maze_row = 14;
+num_maze_column = 14;
 
 cell_size = size(img,1) / num_maze_column;
 
@@ -35,23 +35,22 @@ for r = 1 : num_maze_row
             cell_size * (c-1) + 1,...
             cell_size * (r-1) + cell_size/2];
         if c == num_maze_column+1 % last column
-            coor_(1) = coor_(1) - (coor_(1)+boarder_thickness - size(img,1));
+            coor_(1) = coor_(1) - (coor_(1)+boarder_thickness - size(img,2));
         end
-        
         coor = round(coor_);
         % if any pixel from coor to <half-boarder size pixel> right from coor is black, there is a boarder
-        if any(img(coor(1):coor(1)+round(boarder_thickness), coor(2), 1) < 250) 
+        if any(img(coor(2), coor(1):coor(1)+round(boarder_thickness), 1) < 250) 
             for k = 0 : round(boarder_thickness)
-                img(coor(1)+k, coor(2), 1) = 255;
-                img(coor(1)+k, coor(2), 2) = 0;
-                img(coor(1)+k, coor(2), 3) = 0;
+                img(coor(2), coor(1)+k, 1) = 255;
+                img(coor(2), coor(1)+k, 2) = 0;
+                img(coor(2), coor(1)+k, 3) = 0;
             end
             lrboarders(r,c) = 1;
         else
             for k = 0 : round(boarder_thickness)
-                img(coor(1)+k, coor(2), 1) = 0;
-                img(coor(1)+k, coor(2), 2) = 0;
-                img(coor(1)+k, coor(2), 3) = 255;
+                img(coor(2), coor(1)+k, 1) = 0;
+                img(coor(2), coor(1)+k, 2) = 0;
+                img(coor(2), coor(1)+k, 3) = 255;
             end
             lrboarders(r,c) = 0;
         end
@@ -65,23 +64,22 @@ for r = 1 : num_maze_row+1
             cell_size * (c-1) + cell_size/2,...
             cell_size * (r-1) + 1];
         if r == num_maze_row+1 % last row
-            coor_(2) = coor_(2) - (coor_(2) + boarder_thickness - size(img,2));
+            coor_(2) = coor_(2) - (coor_(2) + boarder_thickness - size(img,1));
         end
-        
         coor = round(coor_);
         % if any pixel from coor to <half-boarder size pixel> down from coor is black, there is a boarder
-        if any(img(coor(1), coor(2):coor(2)+round(boarder_thickness), 1) < 250)
+        if any(img(coor(2):coor(2)+round(boarder_thickness), coor(1), 1) < 250)
             for k = 0 : round(boarder_thickness)
-                img(coor(1), coor(2)+k, 1) = 255;
-                img(coor(1), coor(2)+k, 2) = 0;
-                img(coor(1), coor(2), 3) = 0;
+                img(coor(2)+k, coor(1), 1) = 255;
+                img(coor(2)+k, coor(1), 2) = 0;
+                img(coor(2)+k, coor(1), 3) = 0;
             end
             udboarders(r,c) = 1;    
         else
             for k = 0 : round(boarder_thickness)
-                img(coor(1), coor(2)+k, 1) = 0;
-                img(coor(1), coor(2)+k, 2) = 0;
-                img(coor(1), coor(2)+k, 3) = 255;
+                img(coor(2)+k, coor(1), 1) = 0;
+                img(coor(2)+k, coor(1), 2) = 0;
+                img(coor(2)+k, coor(1), 3) = 255;
             end
             udboarders(r,c) = 0;
         end

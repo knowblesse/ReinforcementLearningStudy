@@ -1,12 +1,8 @@
 import numpy as np
 from pathlib import Path
-from matplotlib import pyplot as plt
-import seaborn as sns
 
-# Set File Name
-FILE_NAME = "Maze_30x30.txt" # Name of the state txt file
-START_POINT = 0
-END_POINT = 899
+# 사용할 Maze_*x*_table.txt 파일명을 입력
+FILE_NAME = "Maze_30x30_table.txt"
 
 """ ###########################################################  """
 """ Code below CAN be changed, but recommend to leave untouched. """
@@ -20,8 +16,8 @@ class Maze:
         try:
             self.state_table = np.loadtxt(Path("./"+FILE_NAME), dtype=int)
         except:
-            print("[ERROR] State table file loading error")
-            print("Can not find <" + FILE_NAME + "> in " + str(Path("./").absolute()))
+            raise Exception("[ERROR] State table file loading error\n\
+            Can not find <" + FILE_NAME + "> in " + str(Path("./").absolute()))
 
     def getNextState(self, currState, action):
         """
@@ -43,14 +39,16 @@ maze = Maze()
 """ ###########################################################  """
 
 """ Write your code below this line """
+START_POINT = 0
+END_POINT = 899
 
 # Initialize random function
 np.random.RandomState(seed=None)
 
 # parameters
-learning_rate = 0.3
+learning_rate = 0.4
 e = 0.1
-gamma = 0.98
+gamma = 0.9
 numEpoch = 50
 
 # Memory
@@ -59,7 +57,7 @@ score = np.zeros([numEpoch,1])
 
 # Learn
 for epoch in np.arange(numEpoch):
-    print("Epoch : " + str(epoch))
+    starttime = time.time()
     # Initialize
     currState = START_POINT
     # Start
@@ -81,22 +79,35 @@ for epoch in np.arange(numEpoch):
         nextState = maze.getNextState(currState, currAction)
         # Check reward
         if nextState == END_POINT:
-            reward = 10
+            reward = 100
         elif nextState == currState:
             reward = -1
         else:
-            reward = 0
+            reward = -.5
         # Update Value
         value_function[currState,currAction] += learning_rate * (reward + gamma * np.max(value_function[nextState,:]) - value_function[currState,currAction])
+
         # Move to Next Trial
         score[epoch, 0] += 1
         #print(str(currState) + " : " + str(currAction))
         currState = nextState
+    last_runtime = time.time() - starttime
+    print("Epoch : " + str(epoch) + " : " + str(time.time() - starttime) + "sec")
 
-plt.plot(score)
-plt.xlabel('Epoch')
-plt.ylabel('Num Moves')
-plt.show()
+# fig = plt.figure(1)
+# ax = fig.add_subplot(111)
+# ax.plot(score)
+#
+# for i in range(np.size(score)):
+#     if score[i,0] == 50:
+#         ax.scatter(i,score[i,0], c='red')
+#     elif score[i,0] == 40:
+#         ax.scatter(i,score[i,0], c='blue')
+#
+# ax.set_xlabel('Epoch')
+# ax.set_ylabel('Num Moves')
+# ax.set_title('')
+# fig.show()
 
-sns.heatmap(np.max(value_function,axis=1).reshape(14,14),cmap='Blues', annot=True)
+sns.heatmap(np.max(value_function,axis=1).reshape(30,30),cmap='Blues')
 plt.show()
