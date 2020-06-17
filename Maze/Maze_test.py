@@ -1,5 +1,8 @@
 import numpy as np
 from pathlib import Path
+import time
+import seaborn as sns
+from matplotlib import pyplot as plt
 
 # 사용할 Maze_*x*_table.txt 파일명을 입력
 FILE_NAME = "Maze_30x30_table.txt"
@@ -46,16 +49,17 @@ END_POINT = 899
 np.random.RandomState(seed=None)
 
 # parameters
-learning_rate = 0.4
-e = 0.1
-gamma = 0.9
-numEpoch = 50
+learning_rate = 1
+e = 0.03
+gamma = 0.99
+numEpoch = 200
 
 # Memory
 value_function = np.zeros([END_POINT+1,4])
 score = np.zeros([numEpoch,1])
 
 # Learn
+totalTime = time.time()
 for epoch in np.arange(numEpoch):
     starttime = time.time()
     # Initialize
@@ -81,9 +85,9 @@ for epoch in np.arange(numEpoch):
         if nextState == END_POINT:
             reward = 100
         elif nextState == currState:
-            reward = -1
+            reward = -10
         else:
-            reward = -.5
+            reward = -1
         # Update Value
         value_function[currState,currAction] += learning_rate * (reward + gamma * np.max(value_function[nextState,:]) - value_function[currState,currAction])
 
@@ -92,8 +96,9 @@ for epoch in np.arange(numEpoch):
         #print(str(currState) + " : " + str(currAction))
         currState = nextState
     last_runtime = time.time() - starttime
-    print("Epoch : " + str(epoch) + " : " + str(time.time() - starttime) + "sec")
-
+    print("Epoch : " + str(epoch) + " : " + str(time.time() - starttime) + "sec | number of moves : " + str(score[epoch]))
+print("====================================================")
+print("Total Time : " + str(time.time() - totalTime) + "sec")
 # fig = plt.figure(1)
 # ax = fig.add_subplot(111)
 # ax.plot(score)
