@@ -2,7 +2,7 @@
 %   @knowblesse
 %   Created on : 2016-11-02
 %   Last Modified on : 2016-11-02
-%   ÁÖ¾îÁø StateValue¸¦ °¡Áö°í È¥ÀÚ¼­ ¹è¿ö°¡¸ç StateValue¸¦ ¼öÁ¤ÇÕ´Ï´Ù.
+%   ï¿½Ö¾ï¿½ï¿½ï¿½ StateValueï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ È¥ï¿½Ú¼ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ StateValueï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Õ´Ï´ï¿½.
 
 %% Initialization
 clear; % close workspace
@@ -14,8 +14,8 @@ clc; % close command window (output window of Matlab)
 repeat = 10000; % Number of Games to let them play
 LearningRate = 0.05; % Learning Rate
 Randomness = 0.2; % 1 : Fully Random, 0 : Fully Greedy, (0,1) : Mixed
-File_Name_Of_StateValue_File = 'StateValue_10000Random20.mat'; % »ç¿ëÇÒ StateValue ÆÄÀÏ ÀÌ¸§. 
-File_Name_Of_New_StateValue_File = 'StateValue_10000Random20.mat'; % »õ·Î¿î StateValue¸¦ ÀúÀåÇÒ ÆÄÀÏ ÀÌ¸§.
+File_Name_Of_StateValue_File = 'StateValue_10000Random20.mat'; % ï¿½ï¿½ï¿½ï¿½ï¿½ StateValue ï¿½ï¿½ï¿½ï¿½ ï¿½Ì¸ï¿½. 
+File_Name_Of_New_StateValue_File = 'StateValue_10000Random20.mat'; % ï¿½ï¿½ï¿½Î¿ï¿½ StateValueï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Ì¸ï¿½.
 
 %% Load State Table and State Value
 load('StateTable.mat');
@@ -38,6 +38,6 @@ if input('Continue? (Type true or false)\n')
             fprintf('Estimated Time : %d Hours %d Minutes %d Seconds\n',floor(eta/3600),floor(rem(eta,3600)/60),rem(eta,60));
             fprintf('%f %% Complete ......\n',iteration/repeat*100);
         end
-        save('StateValue1.mat','StateValue');
+        save(File_Name_Of_New_StateValue_File,'StateValue');
     toc
 end
