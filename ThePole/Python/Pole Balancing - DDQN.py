@@ -32,18 +32,13 @@ class PoleDQN():
         self.gamma = 0.995  # reward discounting
         self.epsilon = [0.5, 0.05]
         self.train_size = 256
-        self.initial_lr = 0.01
-        self.maxScore = 500
 
         # Q function
         args = dict()
         args['device'] = self.device
         self.policy_net = SimpleDQN(args).to(self.device)
-        self.target_net = SimpleDQN(args).to(self.device)
-        self.target_net.load_state_dict(self.policy_net.state_dict())
-        self.target_net.eval()
 
-        self.optimizer = torch.optim.Adam(self.policy_net.parameters(), lr=self.initial_lr, eps=1e-4)
+        self.optimizer = torch.optim.RMSprop(self.policy_net.parameters())
 
         # Agent Parameters
         self.numStep = 1
@@ -104,20 +99,6 @@ class PoleDQN():
                 self.trainNet()
                 self.numTrain += 1
 
-            if step %30 == 0:
-                self.target_net.load_state_dict(self.policy_net.state_dict())
-
-            if np.mean(self.score) > 0.75 * self.maxScore:
-                new_lr = self.initial_lr / 100.0
-            elif np.mean(self.score) > 0.5 * self.maxScore:
-                new_lr = self.initial_lr / 20.0
-            elif np.mean(self.score) > 0.25 * self.maxScore:
-                new_lr = self.initial_lr / 10.0
-            else:
-                new_lr = self.initial_lr
-            for g in self.optimizer.param_groups:
-                g['lr'] = new_lr
-                
             self.score.append(self.numStep)
             print(f'{self.numTrain} : {np.mean(self.score)}, : {self.numStep}')
 
@@ -135,14 +116,14 @@ class PoleDQN():
         non_final_next_states = torch.tensor([s for s in N if s is not None], device=self.device, dtype=torch.float32)
 
         next_state_values = torch.zeros(self.train_size, device=self.device)
-        next_state_values[non_final_mask] = torch.max(self.target_net.forward(non_final_next_states).detach(),1).values
+        next_state_values[non_final_mask] = torch.max(self.policy_net.forward(non_final_next_states).detach(),1).values
 
-        loss_fn = nn.SmoothL1Loss()
+        loss_fn = F.mse_loss
         loss = loss_fn(self.policy_net.forward(S).gather(1, A), R + self.gamma * next_state_values.unsqueeze(1))
         self.optimizer.zero_grad()
         loss.backward()
         for param in self.policy_net.parameters():
-            torch.nn.utils.clip_grad_norm(param, 0.7)
+            param.grad.clamp_(-1,1)
         self.optimizer.step()
 
     def run(self, numRun):
@@ -176,9 +157,9 @@ class SimpleDQN(nn.Module):
             30)
         self.fc2 = nn.Linear(
             30,
-            30)
+            15)
         self.fc3 = nn.Linear(
-            30,
+            15,
             2)
 
     def forward(self, x):
