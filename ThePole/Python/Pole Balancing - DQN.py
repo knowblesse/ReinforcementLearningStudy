@@ -29,97 +29,94 @@ class PoleDQN():
     def __init__(self):
         # Fixed Parameters
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.gamma = 0.995  # reward discounting
-        self.epsilon = [0.5, 0.05]
+        self.gamma = 0.99  # reward discounting
+        self.initial_epsilon = 1
+        self.epsilon = self.initial_epsilon
         self.train_size = 256
         self.initial_lr = 0.01
-        self.maxScore = 500
 
         # Q function
         args = dict()
         args['device'] = self.device
         self.policy_net = SimpleDQN(args).to(self.device)
-        self.target_net = SimpleDQN(args).to(self.device)
-        self.target_net.load_state_dict(self.policy_net.state_dict())
-        self.target_net.eval()
 
         self.optimizer = torch.optim.Adam(self.policy_net.parameters(), lr=self.initial_lr, eps=1e-4)
 
         # Agent Parameters
-        self.numStep = 1
+        self.numTrain = 0
+        self.numStep = 0
+
+        self.score_history = []
+        self.rollingScore = deque([], maxlen=10)
+
         self.last_state = None
-        self.last_action = None
         self.Memory = ReplayMemory(40000)  # replay memory for learning
 
-        # Agent Metrics
-        self.score = deque([], maxlen=50)
-        self.numTrain = 0
-        self.bestScore = 0
+        self.env = gym.make('CartPole-v0')
 
-        self.env = gym.make('CartPole-v1')
-        self.state = self.env.reset()
 
-    def train(self, numTrain):
-        self.score.clear()
-        for step in range(numTrain):
+    def train(self, totTrain):
+        for episode in range(totTrain):
             self.state = list(self.env.reset())
+            self.last_state = self.state
             self.numStep = 1
             done = False
-            self.last_state = None
+
             while not done:
-                reward = 1
-                # Calculate the values
-                if np.random.rand() < self.epsilon[1] + (self.epsilon[0] - self.epsilon[1])*(numTrain-step)/numTrain:
+                # Select Action
+                if np.random.rand() < self.epsilon:
                     action = random.choice([0,1])
-                else:  # Go Softmax
+                else:
                     self.policy_net.eval() # set the policy net to evaluation mode
                     with torch.no_grad():
-                        action = self.policy_net.forward(torch.tensor(self.state, dtype=torch.float32)).max(0)[1].item()
+                        action = self.policy_net(torch.tensor(self.state, dtype=torch.float32)).max(0)[1].item()
                     self.policy_net.train() # set the policy net back into training mode
 
+                # Conduct Action
+                self.state, reward, done, _ = self.env.step(action)
+                self.state = list(self.state)
+
                 # Save to the Replay Memory
-                if self.last_state is not None:
+                if done:
                     self.Memory.push(
                         self.last_state,
-                        self.last_action,
+                        action,
+                        0,
+                        None)
+                else:
+                    self.Memory.push(
+                        self.last_state,
+                        action,
                         reward,
                         self.state)
 
-                self.last_state = self.state
-                self.last_action = action
+                if len(self.Memory) > 256:
+                    self.trainNet()
+                    self.numTrain += 1
 
-                self.state, _, done, _ = self.env.step(action)
-                self.state = list(self.state)
+                # Update Learning Rate
+                if np.mean(self.score_history) > 0.75 * 195:
+                    new_lr = self.initial_lr / 100.0
+                elif np.mean(self.score_history) > 0.6 * 195:
+                    new_lr = self.initial_lr / 20.0
+                elif np.mean(self.score_history) > 0.5 * 195:
+                    new_lr = self.initial_lr / 10.0
+                elif np.mean(self.score_history) > 0.25 * 195:
+                    new_lr = self.initial_lr / 2.0
+                else:
+                    new_lr = self.initial_lr
+                for g in self.optimizer.param_groups:
+                    g['lr'] = new_lr
+
+                # Update Epsilon
+                self.epsilon = self.initial_epsilon / (1.0 + (self.numStep))
+
+                self.last_state = self.state
                 self.numStep += 1
 
-            # Save to the Replay Memory
-            if self.last_state is not None:
-                self.Memory.push(
-                    self.last_state,
-                    self.last_action,
-                    0,
-                    None)
-
-            if len(self.Memory) > 1000:
-                self.trainNet()
-                self.numTrain += 1
-
-            if step %30 == 0:
-                self.target_net.load_state_dict(self.policy_net.state_dict())
-
-            if np.mean(self.score) > 0.75 * self.maxScore:
-                new_lr = self.initial_lr / 100.0
-            elif np.mean(self.score) > 0.5 * self.maxScore:
-                new_lr = self.initial_lr / 20.0
-            elif np.mean(self.score) > 0.25 * self.maxScore:
-                new_lr = self.initial_lr / 10.0
-            else:
-                new_lr = self.initial_lr
-            for g in self.optimizer.param_groups:
-                g['lr'] = new_lr
-                
-            self.score.append(self.numStep)
-            print(f'{self.numTrain} : {np.mean(self.score)}, : {self.numStep}')
+            self.score_history.append(self.numStep)
+            self.rollingScore.append(self.numStep)
+            print(f'Episode:{episode:3d} numTrain:{self.numTrain:5d} score:{self.numStep:3d} rollingScore:{np.mean(self.rollingScore)}')
 
     def trainNet(self):
         # generate train batch (from replay memory)
@@ -135,19 +132,18 @@ class PoleDQN():
         non_final_next_states = torch.tensor([s for s in N if s is not None], device=self.device, dtype=torch.float32)
 
         next_state_values = torch.zeros(self.train_size, device=self.device)
-        next_state_values[non_final_mask] = torch.max(self.target_net.forward(non_final_next_states).detach(),1).values
+        next_state_values[non_final_mask] = torch.max(self.policy_net(non_final_next_states).detach(),1).values
 
-        loss_fn = nn.SmoothL1Loss()
-        loss = loss_fn(self.policy_net.forward(S).gather(1, A), R + self.gamma * next_state_values.unsqueeze(1))
         self.optimizer.zero_grad()
+        loss = F.mse_loss(self.policy_net(S).gather(1, A), R + self.gamma * next_state_values.unsqueeze(1))
+
         loss.backward()
-        for param in self.policy_net.parameters():
-            torch.nn.utils.clip_grad_norm(param, 0.7)
+        torch.nn.utils.clip_grad_norm_(self.policy_net.parameters(), 0.7)
         self.optimizer.step()
 
     def run(self, numRun):
         for step in range(numRun):
-            self.state = list(self.env.reset())
+            self.state = self.env.reset()
             self.env.render()
             self.numStep = 1
             done = False
@@ -160,7 +156,6 @@ class PoleDQN():
                 self.state = list(self.state)
                 self.env.render()
                 self.numStep += 1
-
 
 class SimpleDQN(nn.Module):
     def __init__(self, params):
@@ -176,9 +171,9 @@ class SimpleDQN(nn.Module):
             30)
         self.fc2 = nn.Linear(
             30,
-            30)
+            15)
         self.fc3 = nn.Linear(
-            30,
+            15,
             2)
 
     def forward(self, x):
